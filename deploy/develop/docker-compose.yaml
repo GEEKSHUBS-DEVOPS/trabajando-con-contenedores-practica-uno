@@ -1,0 +1,85 @@
+version: '2'
+
+services:      
+    microservice-a:
+        container_name: microservice-a
+        build:
+            context: ../../builds/lb4-cli
+        command: npm run dev
+        restart: always
+        ports:
+            - 3000:3000
+            - 5000:5000
+        environment: 
+            MONGO_HOST: 'mongo'
+            MONGO_DATABASE: 'microservice-a'
+        volumes:
+            - ../../source/microservice-a:/app
+    microservice-b:
+        container_name: microservice-b
+        build:
+            context: ../../builds/lb4-cli
+        command: npm run dev
+        restart: always
+        ports:
+            - 3001:3000
+            - 5001:5000
+        environment: 
+            MONGO_HOST: 'mongo'
+            MONGO_DATABASE: 'microservice-b'
+        volumes:
+            - ../../source/microservice-b:/app            
+    mongo:
+        container_name: mongo
+        image: mongo:latest
+        environment:
+            - MONGO_DATA_DIR=/data/db
+            - MONGO_LOG_DIR=/dev/null
+        volumes:
+            - ../../data/mongo:/data/db
+
+    redis:
+        container_name: redis
+        image: redis:latest
+        environment:
+            - MONGO_DATA_DIR=/data/db
+            - MONGO_LOG_DIR=/dev/null
+        volumes:
+            - ../../data/redis:/data
+
+    minio:
+        image: minio/minio
+        restart: always
+        command: server /data
+        environment:
+            MINIO_ACCESS_KEY: AKIAIOSFOXNN7
+            MINIO_SECRET_KEY: wJalxXUtnFEMI/K7MDENG/bPaRfiCY
+        ports:
+            -   9000:9000
+        expose:
+            -   '9000'
+        volumes:
+            - ../../data/minio:/data        
+
+    mongoexpress:
+            image: mongo-express
+            depends_on:
+                - "mongo"
+            links:
+                - "mongo"
+            ports:
+                - 8081:8081  
+            environment: 
+                ME_CONFIG_MONGODB_SERVER: mongo
+                ME_CONFIG_OPTIONS_EDITORTHEME: ambiance
+
+    mongoku:
+        image: huggingface/mongoku
+        depends_on:
+            - "mongo"
+        links:
+            - "mongo"
+        ports:
+            - 3100:3100  
+        environment: 
+            MONGOKU_DEFAULT_HOST: mongo
